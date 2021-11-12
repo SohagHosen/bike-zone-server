@@ -18,6 +18,23 @@ async function run() {
     await client.connect();
     const database = client.db(process.env.DB_NAME);
     const bikesCollection = database.collection("bikes");
+    const usersCollection = database.collection("users");
+    const ordersCollection = database.collection("orders");
+    const reviewsCollection = database.collection("reviews");
+
+
+    // Posting new User
+    app.post("/users", async (req, res) => {
+      const result = await usersCollection.insertOne(req.body);
+      res.json(result);
+    });
+
+    // getting current user 
+    app.get("/users/:email", async (req, res) => {
+      const query = { email: req.params.email };
+      const result = await usersCollection.findOne(query)
+      res.send(result);
+    });
 
     // get all bikes 
     app.get("/bikes", async (req, res) => {
@@ -32,50 +49,84 @@ async function run() {
       res.send(result);
     })
 
+    // get all Orders
+    app.get("/orders", async (req, res) => {
+      const result = await ordersCollection.find({}).toArray()
+      res.send(result);
+    })
 
-    // booking room
-    app.post("/room/booking", async (req, res) => {
-      const result = await bookings.insertOne(req.body);
+    // get user Orders
+    app.get("/orders/:email", async (req, res) => {
+      const query = { email: req.params.email }
+      const result = await ordersCollection.find(query).toArray()
+      res.send(result);
+    })
+
+
+    // new Order
+    app.post("/orders", async (req, res) => {
+      const result = await ordersCollection.insertOne(req.body);
       res.json(result);
     });
 
-    // get user booking rooms
-    app.get("/user/bookings/:email", async (req, res) => {
-      const query = { email: { $in: [req.params.email] } };
-      const result = await bookings.find(query).toArray();
-      res.send(result);
-    });
 
-    // delete booking room
-    app.delete("/booking/cancel/:id", async (req, res) => {
+    // delete order 
+    app.delete("/orders/:id", async (req, res) => {
       const query = { _id: ObjectId(req.params.id) };
-      const result = await bookings.deleteOne(query);
+      const result = await ordersCollection.deleteOne(query);
       res.json(result);
     });
-    // get all bookings
-    app.get("/bookings", async (req, res) => {
-      const result = await bookings.find({}).toArray();
+
+
+    // new review
+    app.post("/reviews", async (req, res) => {
+      const result = await reviewsCollection.insertOne(req.body);
+      res.json(result);
+    });
+
+    // get all reviews
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewsCollection.find({}).sort({ _id: -1 }).toArray();
       res.send(result);
     });
 
-    // insert new room
-    app.post("/room/new", async (req, res) => {
-      const result = await rooms.insertOne(req.body);
+    // new product
+    app.post("/bikes", async (req, res) => {
+      const result = await bikesCollection.insertOne(req.body);
       res.json(result);
     });
+
+
+    // make admin 
+    app.put("/users/admin", async (req, res) => {
+      const filter = { email: req.body.email };
+      const updateDoc = {
+        $set: { role: 'admin' },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.json(result);
+
+    });
+
+    // delete product
+    app.delete("/bikes/:id", async (req, res) => {
+      const query = { _id: ObjectId(req.params.id) };
+      const result = await bikesCollection.deleteOne(query);
+      res.json(result);
+    });
+
+
 
     // update room status
-    app.patch("/booking/status/:id", async (req, res) => {
-      console.log(req.params.id);
+    app.patch("/orders/status/:id", async (req, res) => {
       const filter = { _id: ObjectId(req.params.id) };
-      const options = { upsert: true };
-      // create a document that sets the plot of the movie
       const updateDoc = {
         $set: req.body,
       };
-      const result = await bookings.updateOne(filter, updateDoc, options);
+      const result = await ordersCollection.updateOne(filter, updateDoc);
       res.json(result);
     });
+
   }
   finally { }
 }
